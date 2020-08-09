@@ -1,0 +1,483 @@
+<html>
+	<head>
+		<title>GymLund</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+		<meta content="yes" name="apple-mobile-web-app-capable">
+		<meta content="yes" name="mobile-web-app-capable">
+		<meta content="minimum-scale=1.0, width=device-width, maximum-scale=0.6667, user-scalable=no" name="viewport">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+		<meta property="og:title" content="GymLund">
+		<!-- <meta property="og:url" content="#lank#"> -->
+		<meta property="og:type" content="website">
+		<meta property="og:description" content="Lista över alla Pokémon Go gym i Lund.">
+		<meta property="og:image" content="ico/icon.jpg">
+
+		<link rel="shortcut icon" href="ico/icon.ico">
+		<link rel="icon" type="image/vnd.microsoft.icon" href="ico/icon.ico">
+		<link rel="icon" type="image/png" href="ico/icon196x196.png">
+		<link rel="apple-touch-icon-precomposed" href="ico/icon180x180.png">
+		<link rel="apple-touch-icon-precomposed" sizes="76x76" href="ico/icon76x76.png">
+		<link rel="apple-touch-icon-precomposed" sizes="120x120" href="ico/icon120x120.png">
+		<link rel="apple-touch-icon-precomposed" sizes="152x152" href="ico/icon152x152.png">
+
+		<script type="text/javascript">
+			function removechilds(parent){if(parent.hasChildNodes()){while (parent.hasChildNodes()) {parent.removeChild(parent.firstChild);};};};
+			var loadedData = [];
+			var stadData = [];
+			//Fetch funktion som ger möjlighet att hämta info från Google Sheet.
+			var sheetID = '1BWtH6cBOzcdUlIywS7DqZcROSsQoC5F9p2NMYUhgFys';
+			var getJSON = function(url, callback) {
+				var xhr = new XMLHttpRequest();
+					xhr.open('GET', url, true);
+					xhr.responseType = 'json';
+					xhr.onload = function() {
+						var status = xhr.status;
+						if (status == 200) {
+							callback(null, xhr.response);
+						} else {
+							callback(status);
+						}
+					};
+					xhr.send();
+			};
+			//Initial funktion som hämtar lista för alla tillgängliga gym.
+			getJSON('https://spreadsheets.google.com/feeds/cells/' + sheetID + '/1/public/values?alt=json',  function(err, rawdata) {
+				if (err != null) {
+					console.error(err);
+				}else{
+					if(!rawdata.feed){
+						var data = JSON.parse(rawdata);
+					}else{
+						var data = rawdata;
+					};
+					var buttonWrapper = document.getElementById('andraStader');
+					for (var i = 0; i < data.feed.entry.length; i++){
+						if(data.feed.entry[i].content['$t'] == 'Städer'){}else if(data.feed.entry[i].content['$t'] == 'Nr'){}else{
+							var button = document.createElement('span');
+								button.setAttribute('class', 'link');
+								var button_a = document.createElement('a');
+									button_a.setAttribute('href', '#' + data.feed.entry[i+1].content['$t']);
+									button_a.setAttribute('onclick', 'changeGym(\'' + data.feed.entry[i+1].content['$t'] + '\')');
+									var button_a_text = document.createTextNode('Gym' + data.feed.entry[i].content['$t']);
+									button_a.appendChild(button_a_text);
+								button.appendChild(button_a);
+							buttonWrapper.appendChild(button);
+							loadedData.push({"stad": data.feed.entry[i].content['$t'], "nr": data.feed.entry[i+1].content['$t']})
+							i++;
+						};
+					};
+					if(location.hash == '' || !location.hash){
+						location.hash = loadedData[0].nr;
+					};
+					loadGym();
+				};
+			});
+			//När stad är satt i hash aktiveras denna funktion, letar upp rätt sheet och hämtar all gym data.
+			function loadGym(){
+				for (var i = loadedData.length - 1; i >= 0; i--) {
+					if(loadedData[i].nr == location.hash.replace('#', '')){
+						document.getElementById('rubrik').innerText = 'Gym i ' + loadedData[i].stad;
+						document.getElementsByTagName('title')[0].innerText = 'Gym ' + loadedData[i].stad;
+						getJSON('https://spreadsheets.google.com/feeds/cells/' + sheetID + '/' + loadedData[i].nr + '/public/values?alt=json',  function(err, rawdata) {
+							if (err != null) {
+								console.error(err);
+							}else{
+								if(!rawdata.feed){
+									var data = JSON.parse(rawdata);
+								}else{
+									var data = rawdata;
+									var reverse = [];
+									for (var a = 0; a < data.feed.entry.length; a++){
+										if(data.feed.entry[a].title['$t'].length == 2 && data.feed.entry[a].title['$t'].split('')[1] == '1'){}else{
+											if(data.feed.entry[a+2].content['$t'] == '-'){
+												var badgeCode = okandPNG();
+											}else{
+												var badgeCode = data.feed.entry[a+7].content['$t'];
+											};
+											reverse.push({
+												"namn": data.feed.entry[a].content['$t'],
+												"smeknamn": data.feed.entry[a+1].content['$t'],
+												"id": data.feed.entry[a+2].content['$t'],
+												"lat": data.feed.entry[a+3].content['$t'],
+												"long": data.feed.entry[a+4].content['$t'],
+												"ex": data.feed.entry[a+5].content['$t'],
+												"rip": data.feed.entry[a+6].content['$t'],
+												"badge": badgeCode
+											});
+											if(data.feed.entry[a+2].content['$t'] == '-'){
+												a = a+6;
+											}else{
+												a = a+7;
+											};
+										};
+									};
+									stadData = reverse;
+									if(!window['lon'] == '0' && !window['lat'] == '0'){addKm()};
+									andralista();
+								};
+							};
+						});
+					};
+				};
+			};
+			//När data laddats för en stad börjar den funktionen bygga.
+			function addContent(todo){
+				removechilds(document.getElementById('wrapper'));
+				removechilds(document.getElementById('searchelements'));
+				if(todo == 'names'){
+					stadData = stadData.sort(function(a, b) {
+						var nameA = a.namn.toUpperCase(); // ignore upper and lowercase
+						var nameB = b.namn.toUpperCase(); // ignore upper and lowercase
+						if (nameA < nameB) {
+							return -1;
+						}
+						if (nameA > nameB) {
+							return 1;
+						}
+						return 0;
+					});
+				}else if(todo == 'km'){
+					stadData = stadData.sort(function (a, b) {
+						return a.km - b.km;
+					});
+				}else{
+					console.log('addContent kunde inte förstå hur den ska sortera gymmen.');
+				};
+				buildMenu(stadData);
+				var listWrapper = document.getElementById('wrapper');
+				for (var a = 0; a < stadData.length; a++){
+					if(stadData[a].rip == 'TRUE'){
+						var rip_todo = ' rip'
+						var rip_icon = '[RIP]'
+					}else{
+						var rip_todo = '';
+						var rip_icon = '';
+					};
+					if(stadData[a].ex == 'TRUE'){
+						var ex_todo = ' extd';
+					}else{
+						var ex_todo = '';
+					};
+					if(!stadData[a].km){
+						var kminfo = '';
+					}else{
+						var kminfo = ' (' + stadData[a].km + 'km)';
+					};
+					var line = document.createElement('div');
+						line.setAttribute('onclick', 'window.open(\'http://maps.google.com/?q=' + stadData[a].lat + ',' + stadData[a].long + '\')');
+						line.setAttribute('data-lon', stadData[a].long);
+						line.setAttribute('data-lat', stadData[a].lat);
+						line.setAttribute('class', 'tr ' + stadData[a].namn.split('')[0] + rip_todo + ex_todo);
+						var badge = document.createElement('div');
+							badge.setAttribute('class', 'td');
+							var badge_img = document.createElement('img');
+								badge_img.setAttribute('src', stadData[a].badge);
+							badge.appendChild(badge_img);
+						line.appendChild(badge);
+						var name = document.createElement('div');
+							name.setAttribute('class', 'td');
+							var name_t = document.createTextNode(stadData[a].namn + kminfo);
+							name.appendChild(name_t);
+						line.appendChild(name);
+						var extra = document.createElement('div');
+							extra.setAttribute('class', 'td' + ex_todo);
+							var extra_span = document.createElement('span');
+								extra_span.setAttribute('height', '30px');
+								extra_span.setAttribute('style', 'padding-right: 35px;font-size: 20px;');
+								var extra_t = document.createTextNode(rip_icon);
+								extra_span.appendChild(extra_t);
+								if(stadData[a].ex == 'TRUE'){
+									var ex_img = document.createElement('img');
+										ex_img.setAttribute('src', 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODkuOTQgMTcyLjk0Ij48cGF0aCBkPSJNOTkuMTgsNDMuNjVjMy43Mi0xLjYxLDcuNDEtMy4yOSwxMS4xNi00LjgyLDExLjI1LTQuNiwyMi40OS05LjI0LDMzLjgyLTEzLjYyLDEuNzktLjY5LDQuMDUtLjE0LDYuMDktLjE1LS43MiwyLjA2LTEsNC40OS0yLjI1LDYuMTEtNC4xMSw1LjIyLTguNjEsMTAuMTQtMTIuOTMsMTUuMmE4LjM0LDguMzQsMCwwLDAtLjg3LDEuNzdjOS45MywyLjI4LDE5LjYzLDQuNDQsMjkuMjksNi43NkEzNC42OCwzNC42OCwwLDAsMSwxNzEsNTcuNTljMS4zMy42NywzLjA2LDIuMTksMy4wOCwzLjM2cy0xLjY5LDIuNzMtMywzLjQyYy03LjUyLDMuOTQtMTUuMTksNy41OS0yMi43MSwxMS41Mi00LjI3LDIuMjMtOC40Niw0LjY3LTEyLjUyLDcuMjgtNy41Nyw0Ljg3LTcuODgsMTAuNjEtLjM2LDE2LDguOTIsNi40LDE4LjI3LDEyLjE5LDI3LjQ0LDE4LjI0LjU2LjM2LDEuMTYuNjYsMS43MywxLDEwLjExLDYuMTIsMTAuNzgsNy44NSwzLjcyLDE3LjI1LTUuNTcsNy40LTEyLjA2LDE0LjEyLTE4LjMxLDIxLTIuODMsMy4xMS02LjA4LDIuNi05LjQ3LjQ0LTUuNjEtMy41OC0xMS4zLTctMTcuMDktMTAuMzMtMTQuMTktOC4wNy0yOS04LjMxLTQ0LjUtNC4wNmExMjIuODcsMTIyLjg3LDAsMCwxLTI0LjQ3LDQuMDdjLTMuNzkuMjUtOC0xLjgzLTExLjU4LTMuNzVzLTMuMzQtNC45NS4xOS02LjM3YzQuMy0xLjc0LDQuOC00LjQ0LDMuODctOC4yM2ExLDEsMCwwLDEsMC0uNDlsMS44My03LjMzYzIuMTUsMSw0LjU2LDEuNjgsNi40LDMuMDksNi4yMSw0Ljc2LDcuNTksNSwxMy45NC4zNGExMjMuNDksMTIzLjQ5LDAsMCwwLDEyLjI0LTEwLjIzYzEuODEtMS43NSw0LjY2LTQsMS42Ny03LjE3cy01LjMzLTEuMzYtNy43Ny42N2MtMS4yOCwxLjA2LTIuNTYsMi4xMy0zLjg5LDMuMTQtNC44OSwzLjczLTYuMTEsNC05LjQ0LTEuNC0zLjY4LTUuOS04LjM2LTcuNS0xNS03LjIyLTguMjEuMzUtMTYuMjQuMi0yMy40Nyw1LjE5LTMuMzIsMi4yOC02LC43MS03LTMuMjlBMjEuMjcsMjEuMjcsMCwwLDEsMTksODYuNDhjOC40NS0xMy42NywyMC40OC0yMywzNS0yOS40MmEzOS4wOCwzOS4wOCwwLDAsMCw5LjgyLTYuNTVjMTIuMTMtMTAuODUsMjQtMjEuOTQsMzYuMDctMzIuOTJhOS4xMyw5LjEzLDAsMCwxLDIuODUtMmMxLjI4LS40NSwzLjI4LTEuMDYsNC0uNDZzMS4wNiwyLjgzLjY0LDRjLTIuMDYsNS42My00LjQ0LDExLjEzLTYuNjYsMTYuNy0uODksMi4yNC0xLjY1LDQuNTMtMi40Nyw2Ljc5Wk01Mi45LDg1LjQ2YzEzLjE0LDcuNDcsMjguNDUtNS43LDMwLjYyLTE2LjhDNzEuNzcsNjguNjYsNTUuODEsNzcuNDEsNTIuOSw4NS40NloiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0xLjAzIC0xLjAzKSIvPjxwYXRoIGQ9Ik01Mi45LDg1LjQ2YzIuOTEtOCwxOC44Ny0xNi44LDMwLjYyLTE2LjhDODEuMzUsNzkuNzYsNjYsOTIuOTMsNTIuOSw4NS40NloiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0xLjAzIC0xLjAzKSIgc3R5bGU9ImZpbGw6I2ZmZiIvPjwvc3ZnPg==');
+									extra_span.appendChild(ex_img);
+								};
+							extra.appendChild(extra_span);
+						line.appendChild(extra);
+					wrapper.appendChild(line);
+					var data_wrapper = document.getElementById('searchelements');
+						var data_option = document.createElement('option');
+							data_option.setAttribute('value', stadData[a].namn);
+						data_wrapper.appendChild(data_option);
+				};
+				getLocation();
+			};
+			//Frågar användaren om tillåtelse att använda geo-data
+			var lon = '0';
+			var lat = '0';
+			function getLocation() {
+				if (navigator.geolocation) {
+					navigator.geolocation.getCurrentPosition(showPosition);
+				};
+			};
+			//Aktiveras när användaren godkänt GEO-data
+			function showPosition(position) {
+				window['lat'] = position.coords.latitude;
+				window['lon'] = position.coords.longitude;
+				var kmwrapper = document.getElementById('sortkm');
+					kmwrapper.removeAttribute('disabled');
+					kmwrapper.parentElement.removeAttribute('class');
+				addKm();
+			};
+			//Lägger till nollor framför nummer
+			function pad (str, max) {str = str.toString();return str.length < max ? pad("0" + str, max) : str;};
+			//Räknar ut distans i km
+			function getDistanceFromLatLonInKm(lon2,lat2,lon1,lat1) {
+				if(lat1 == '0'){}else{
+					var R = 6371; // Radius of the earth in km
+					var dLat = deg2rad(lat2-lat1);  // deg2rad below
+					var dLon = deg2rad(lon2-lon1); 
+					var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2);
+					var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+					var d = R * c; // Distance in km
+					return d;
+				};
+			};
+			function deg2rad(deg) {return deg * (Math.PI/180)};
+			function addKm(){
+				for (var i = stadData.length - 1; i >= 0; i--) {
+					var km = Math.round(getDistanceFromLatLonInKm(stadData[i].long,stadData[i].lat,window['lon'],window['lat']) * 10);
+					stadData[i].km = km;
+				};
+				andralista();
+			};
+			/*Funktion som räknar ut km*/
+
+			//Möjlighet att sortera i listan, sker primärt via CSS. Km kommer behöver lite JS logik.
+			function andralista(){
+				var ex = document.getElementById('visaex');
+				if(ex.checked){
+					var visaex = '.tr {display: none;} .tr.extd{display: table-row;}';
+				}else{
+					var visaex = '';
+				};
+				var rip = document.getElementById('visarip');
+				if(rip.checked){
+					var visarip = '.tr.rip{display: table-row;!important}';
+				}else{
+					var visarip = '.tr.rip {display: none;}';
+				};
+				var km = document.getElementById('sortkm');
+				if(km.checked){
+					var sortbykm = 'km';
+				}else{
+					var sortbykm = 'names';
+				};
+				var style_wrapper = document.getElementById('edit_style');
+					removechilds(style_wrapper);
+					var style_code = document.createTextNode(visaex + visarip);
+					style_wrapper.appendChild(style_code);
+				addContent(sortbykm);
+			};
+			//Möjlighet för användaren att ändra gym. Börjar med att ändra hash, därefter anropas vanliga hämta gym funktionen.
+			function changeGym(num){
+				location.hash = num;
+				loadGym();
+				event.preventDefault();
+			};
+			//Bygger scroll menyn
+			function buildMenu(gymNames){
+				var char = []
+				for (var i = gymNames.length - 1; i >= 0; i--) {
+					var n = gymNames[i].namn.split('')[0];
+					if(char.indexOf(n) == '-1'){
+						char.push(n);
+					};
+				};
+				char.sort();
+				var wrapper = document.getElementById('list-navigation');
+				removechilds(wrapper);
+					var li = document.createElement('li');
+						var search = document.createElement('p');
+							search.setAttribute('class', 'searchicon');
+							search.setAttribute('onclick', 'showsearch();');
+							var search_t = document.createTextNode('☌');
+							search.appendChild(search_t);
+						li.appendChild(search);
+						for (var a = 0; a < char.length; a++){
+							var line = document.createElement('p');
+								if(a == 0){line.setAttribute('style', 'color: #000;font-weight: bold;');};
+								line.setAttribute('data-letter', char[a]);
+								line.setAttribute('onclick', 'scrollToSelected(this);');
+								var line_t = document.createTextNode(char[a]);
+								line.appendChild(line_t);
+							li.appendChild(line);
+						};
+					wrapper.appendChild(li);
+			};
+			//Scrollar användaren till önskad bokstav
+			function scrollToSelected(element){
+				var letter = element.getAttribute('data-letter');
+				var firstelement = document.getElementsByClassName(letter)[0];
+				if (!!firstelement && firstelement.scrollIntoView) {
+					firstelement.scrollIntoView();
+				};
+			};
+			//Lyssnar på scroll, och higlightar vilken bokstav som för tillfället är aktiv.
+			var scrollTimer = -1;
+			function getTopElement(){
+				if (scrollTimer != -1)
+			        clearTimeout(scrollTimer);
+			    scrollTimer = window.setTimeout("scrollFinished()", 100);
+			};
+			function scrollFinished() {
+			    var alllines = document.getElementById('wrapper').getElementsByClassName('tr');
+			    var done = 'false';
+				for (var i = 0; i < alllines.length; i++){
+					if(isVisible(alllines[i])){
+						marklistelem(alllines[i].getAttribute('class').replace('tr ', ''));
+						done = 'true';
+						break;
+					};
+				};
+				if(done == 'false'){
+					marklistelem('A');
+				};
+			};
+			function marklistelem(letter){
+				var allmenuitem = document.getElementById('list-navigation').getElementsByTagName('p');
+				for (var i = allmenuitem.length - 1; i >= 0; i--) {
+					allmenuitem[i].removeAttribute('style');
+					if(allmenuitem[i].getAttribute('data-letter') == letter){
+						allmenuitem[i].setAttribute('style', 'color: #000;font-weight: bold;');
+					};
+				};
+			};
+			//Funktion som kollar vilket element som för tillfället är synlig.
+			function isVisible(elem) {
+				if (!(elem instanceof Element)) throw Error('DomUtil: elem is not an element.');
+				const style = getComputedStyle(elem);
+				if (style.display === 'none') return false;
+				if (style.visibility !== 'visible') return false;
+				if (style.opacity < 0.1) return false;
+				if (elem.offsetWidth + elem.offsetHeight + elem.getBoundingClientRect().height +
+				    elem.getBoundingClientRect().width === 0) {
+				    return false;
+				}
+				const elemCenter   = {
+				    x: elem.getBoundingClientRect().left + elem.offsetWidth / 2,
+				    y: elem.getBoundingClientRect().top + elem.offsetHeight / 2
+				};
+				if (elemCenter.x < 0) return false;
+				if (elemCenter.x > (document.documentElement.clientWidth || window.innerWidth)) return false;
+				if (elemCenter.y < 0) return false;
+				if (elemCenter.y > (document.documentElement.clientHeight || window.innerHeight)) return false;
+				let pointContainer = document.elementFromPoint(elemCenter.x, elemCenter.y);
+				if(!pointContainer) return false;
+				do {
+				    if (pointContainer === elem) return true;
+				} while (pointContainer = pointContainer.parentNode);
+				return false;
+			};
+
+
+
+
+
+			//Behöver fixas bättre!
+			function showsearch(){
+				var wrapper = document.getElementById('head');
+					var searchwrapper = document.createElement('div');
+						searchwrapper.setAttribute('id', 'searchwrapper');
+						var input = document.createElement('input');
+							input.setAttribute('type', 'text');
+							input.setAttribute('id', 'searchinput');
+							input.setAttribute('onkeyup', 'isitsearchable(event, this)');
+							input.setAttribute('onchange', 'isitsearchable(event, this)');
+							input.setAttribute('onclick', 'isitsearchable(event, this)');
+							input.setAttribute('list', 'searchelements');
+						searchwrapper.appendChild(input);
+						var button = document.createElement('input');
+							button.setAttribute('type', 'button');
+							button.setAttribute('disabled', 'disabled');
+							button.setAttribute('value', 'Öppna');
+							button.setAttribute('id', 'searchbutton');
+						searchwrapper.appendChild(button);
+					wrapper.insertBefore(searchwrapper, wrapper.firstChild);
+				document.getElementById('searchinput').focus();
+			};
+			function isitsearchable(e, el){
+				var button = document.getElementById('searchbutton');
+				var resultarray = [];
+				for (var i = stadData.length - 1; i >= 0; i--) {
+					if(stadData[i].namn.toLowerCase().indexOf(el.value.toLowerCase()) !== -1){
+						resultarray.push(stadData[i]);
+					};
+				};
+				console.log(resultarray)
+				if(resultarray.length == 1){
+					button.setAttribute('onclick', 'window.open("http://maps.google.com/?q=' + resultarray[0].lat + ',' + resultarray[0].long + '");removesearch();');
+					button.removeAttribute('disabled');
+				}else{
+					button.setAttribute('disabled', 'disabled');
+					button.removeAttribute('onclick');
+				};
+			    if (e.keyCode == 13) {
+			    	console.log(e.keyCode);
+			        button.click();
+			    };
+			};
+			function removesearch(){
+				setTimeout(function(){
+					var wrapper = document.getElementById('searchwrapper');
+					if(!wrapper){}else{
+						wrapper.parentNode.removeChild(wrapper);
+					};
+				}, 500);
+			};
+
+
+			function okandPNG(){
+				return 'data:image/png;base64,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';
+			};
+		</script>
+		<style type="text/css">html {-webkit-text-size-adjust: 100%;}body {font-family: verdana;margin-right: 0px;margin-left: 0px;margin-top: 0px;margin-bottom: 0px;}.table {max-width: 100%;display: table;}.tr {display: table-row;}.tr.rip {display: none;}.td {display: table-cell;overflow-wrap: break-word;word-wrap: break-word;hyphens: auto;}.table, .td, table, td {border-collapse: collapse;font-size: 1em;vertical-align: middle;}.td:nth-child(2), td:nth-child(2) {width: 100%;padding-right: 10px;}.tr:nth-child(odd), tr:nth-child(odd) {background-color: lightgray;}#table_wrapper {overflow-x: scroll;}.table, table {width: 100%;border-top: solid #000 4px;}.table .tr, table tr {cursor:pointer;}#footer {font-size:10px!important;text-align: center;padding-top: 40px;}#footer a {color:#000;}#footer a:hover {color: #E87600;text-decoration: overline underline;}#list-navigation {color:#696969;position:fixed;right:0px;top:0px;z-index:200;list-style: none;background-color: #FFF;border-radius: 25px;padding: 5px 0px 5px 0px;text-align: center;}#list-navigation p {margin: 0px 10px 0px 10px;padding: 0px;font-size: 0.9em;cursor:pointer;}.link {border-radius: 25px;background-color: lightgreen;padding: 7px;display: inline-block;margin: 5px;}.link a {color: #000;text-decoration: none;}#head, #searchwrapper {margin: 0px;padding: 0px 0px 20px 0px;padding-right: 38px;}#footer {padding-bottom: 10px;}#head, #footer {background-image: -webkit-linear-gradient(315deg, hsla(0, 0%, 100%, .95), rgba(174, 254, 158, .99));background-image: linear-gradient(135deg, hsla(0, 0%, 100%, .95), rgba(174, 254, 158, .99));}h1 img {padding-top: 5px;}h1, #searchwrapper {margin-top: 0px;text-align: center;}p {margin-bottom: 0px;padding-bottom: 0px;}.searchicon {font-size: 1.2em!important;-webkit-transform:rotate(90deg);-moz-transform:rotate(90deg);-o-transform:rotate(90deg);transform:rotate(90deg);ms-filter:"progid:DXImageTransform.Microsoft.BasicImage(rotation=2)";filter:progid:DXImageTransform.Microsoft.BasicImage(rotation=2);color: #000;}#searchbutton {zoom: 1.7;}#searchinput {zoom: 2;}#searchinput, #searchbutton {margin: 0px;padding: 0px;width: 49%;}.rip td:nth-child(2){color: gray;text-decoration: line-through;}.extd {margin: 0px;padding: 0px 40px 0px 0px;}.rip span {font-size: 0.5em;color: red;text-decoration: none;}.rip img, .rip i {opacity: 0.5;}#head i {display: inline-block;}.disabled {color: gray;}</style>
+		<style type="text/css" id="edit_style"></style>
+	</head>
+	<body onscroll="getTopElement()">
+	<div id="head">
+		<h1 id="rubrik">Gym i ???</h1>
+		<span id="headcontent">
+			<p>
+				Klicka på önskat gym för att se var den är på kartan.
+			</p>
+			<p>
+				Instruktioner för att installera denna webappen:
+			</p>
+			<span class="link"><a href="https://www.teddyprojekt.se/manualer/iphone.html" target="_blank">iOS</a></span>
+			<span class="link"><a href="https://www.teddyprojekt.se/manualer/android.html" target="_blank">Android</a></span>
+			<p>
+				Andra städer:
+			</p>
+			<span id="andraStader"></span>
+			<p>
+				Förklaring:
+			</p>
+			<p>
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 189.94 172.94" width="30px" height="30px" style="vertical-align: middle;"><path d="M99.18,43.65c3.72-1.61,7.41-3.29,11.16-4.82,11.25-4.6,22.49-9.24,33.82-13.62,1.79-.69,4.05-.14,6.09-.15-.72,2.06-1,4.49-2.25,6.11-4.11,5.22-8.61,10.14-12.93,15.2a8.34,8.34,0,0,0-.87,1.77c9.93,2.28,19.63,4.44,29.29,6.76A34.68,34.68,0,0,1,171,57.59c1.33.67,3.06,2.19,3.08,3.36s-1.69,2.73-3,3.42c-7.52,3.94-15.19,7.59-22.71,11.52-4.27,2.23-8.46,4.67-12.52,7.28-7.57,4.87-7.88,10.61-.36,16,8.92,6.4,18.27,12.19,27.44,18.24.56.36,1.16.66,1.73,1,10.11,6.12,10.78,7.85,3.72,17.25-5.57,7.4-12.06,14.12-18.31,21-2.83,3.11-6.08,2.6-9.47.44-5.61-3.58-11.3-7-17.09-10.33-14.19-8.07-29-8.31-44.5-4.06a122.87,122.87,0,0,1-24.47,4.07c-3.79.25-8-1.83-11.58-3.75s-3.34-4.95.19-6.37c4.3-1.74,4.8-4.44,3.87-8.23a1,1,0,0,1,0-.49l1.83-7.33c2.15,1,4.56,1.68,6.4,3.09,6.21,4.76,7.59,5,13.94.34a123.49,123.49,0,0,0,12.24-10.23c1.81-1.75,4.66-4,1.67-7.17s-5.33-1.36-7.77.67c-1.28,1.06-2.56,2.13-3.89,3.14-4.89,3.73-6.11,4-9.44-1.4-3.68-5.9-8.36-7.5-15-7.22-8.21.35-16.24.2-23.47,5.19-3.32,2.28-6,.71-7-3.29A21.27,21.27,0,0,1,19,86.48c8.45-13.67,20.48-23,35-29.42a39.08,39.08,0,0,0,9.82-6.55c12.13-10.85,24-21.94,36.07-32.92a9.13,9.13,0,0,1,2.85-2c1.28-.45,3.28-1.06,4-.46s1.06,2.83.64,4c-2.06,5.63-4.44,11.13-6.66,16.7-.89,2.24-1.65,4.53-2.47,6.79ZM52.9,85.46c13.14,7.47,28.45-5.7,30.62-16.8C71.77,68.66,55.81,77.41,52.9,85.46Z" transform="translate(-1.03 -1.03)"/><path d="M52.9,85.46c2.91-8,18.87-16.8,30.62-16.8C81.35,79.76,66,92.93,52.9,85.46Z" transform="translate(-1.03 -1.03)" style="fill:#fff"/></svg> = EX-raid<br>
+				<span style="color: red;">[RIP]</span> = Finns inte längre.
+			</p><br>
+			<p>Inställningar:</p>
+			<p>
+				<p class="disabled"><input type="checkbox" id="sortkm" disabled="disabled" onclick="andralista()"> Sortera efter km
+			</p>
+			<p>
+				<input type="checkbox" id="visaex" onclick="andralista()"> Visa bara EX-raid gym
+			</p>
+			<p>
+				<input type="checkbox" id="visarip" onclick="andralista()"> Visa borttagna gym
+			</p>
+		</div>
+		<div id="table_wrapper">
+			<div id="wrapper" class="table"></div>
+		</div>
+		<datalist id="searchelements"></datalist>
+		<div id="footer">
+			2017&nbsp;©&nbsp;Mattias Måsbäck&nbsp;¦&nbsp;{<a href="https://www.teddyprojekt.se/" target="blank" alt="Länk till denna sida">www.teddyprojekt.se</a>}
+		</div>
+		<ul data-role="none" id="list-navigation">
+			<li><p class="searchicon" onclick="showsearch();">☌</p></li>
+		</ul>
+	</body>
+</html>
