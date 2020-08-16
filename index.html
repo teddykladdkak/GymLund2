@@ -338,7 +338,8 @@
 				var letter = element.getAttribute('data-letter');
 				var firstelement = document.getElementsByClassName(letter)[0];
 				if (!!firstelement && firstelement.scrollIntoView) {
-					firstelement.scrollIntoView();
+					firstelement.scrollIntoView({behavior: "smooth", block: "start", inline: "start"});
+					event.preventDefault();
 				};
 			};
 			//Lyssnar på scroll, och higlightar vilken bokstav som för tillfället är aktiv.
