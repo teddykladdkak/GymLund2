@@ -174,11 +174,16 @@
 					}else{
 						var kminfo = stadData[a].km + 'km ';
 					};
+					if(stadData[a].badge == okandPNG()){
+						var onlyOkanda = ' unown';
+					}else{
+						var onlyOkanda = '';
+					};
 					var line = document.createElement('div');
 						line.setAttribute('onclick', 'window.open(\'http://maps.google.com/?q=' + stadData[a].lat + ',' + stadData[a].long + '\')');
 						line.setAttribute('data-lon', stadData[a].long);
 						line.setAttribute('data-lat', stadData[a].lat);
-						line.setAttribute('class', 'tr ' + stadData[a].namn.split('')[0] + rip_todo + ex_todo);
+						line.setAttribute('class', 'tr ' + stadData[a].namn.split('')[0] + rip_todo + ex_todo + onlyOkanda);
 						var badge = document.createElement('div');
 							badge.setAttribute('class', 'td');
 							var badge_img = document.createElement('img');
@@ -275,7 +280,7 @@
 				};
 				var rip = document.getElementById('visarip');
 				if(rip.checked){
-					var visarip = '.tr.rip{display: table-row;!important}';
+					var visarip = '.tr.rip{display: table-row!important;}';
 				}else{
 					var visarip = '.tr.rip {display: none;}';
 				};
@@ -285,9 +290,15 @@
 				}else{
 					var sortbykm = 'names';
 				};
+				var visaejbesok = document.getElementById('visaejbesok');
+				if(visaejbesok.checked){
+					var visaejbesok_code = '.tr{display: none!important;}.tr.unown{display: table-row!important;}';
+				}else{
+					var visaejbesok_code = '';
+				};
 				var style_wrapper = document.getElementById('edit_style');
 					removechilds(style_wrapper);
-					var style_code = document.createTextNode(visaex + visarip);
+					var style_code = document.createTextNode(visaex + visarip + visaejbesok_code);
 					style_wrapper.appendChild(style_code);
 				addContent(sortbykm);
 			};
@@ -566,6 +577,10 @@
 				<tr>
 					<td><input type="checkbox" id="visarip" onclick="andralista()"></td>
 					<td><p>Visa borttagna gym</p></td>
+				</tr>
+				<tr>
+					<td><input type="checkbox" id="visaejbesok" onclick="andralista()"></td>
+					<td><p>Visa bara obekräftade</p></td>
 				</tr>
 			</table>
 			<table style="display: inline-block;">
