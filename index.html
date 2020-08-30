@@ -95,27 +95,30 @@
 								}else{
 									var data = rawdata;
 									var reverse = [];
+									var first = true;
+									var obj = {};
 									for (var a = 0; a < data.feed.entry.length; a++){
 										if(data.feed.entry[a].title['$t'].length == 2 && data.feed.entry[a].title['$t'].split('')[1] == '1'){}else{
-											if(data.feed.entry[a+2].content['$t'] == '-'){
-												var badgeCode = okandPNG();
-											}else{
-												var badgeCode = data.feed.entry[a+7].content['$t'];
-											};
-											reverse.push({
-												"namn": data.feed.entry[a].content['$t'],
-												"smeknamn": data.feed.entry[a+1].content['$t'],
-												"id": data.feed.entry[a+2].content['$t'],
-												"lat": data.feed.entry[a+3].content['$t'],
-												"long": data.feed.entry[a+4].content['$t'],
-												"ex": data.feed.entry[a+5].content['$t'],
-												"rip": data.feed.entry[a+6].content['$t'],
-												"badge": badgeCode
-											});
-											if(data.feed.entry[a+2].content['$t'] == '-'){
-												a = a+6;
-											}else{
-												a = a+7;
+											if(data.feed.entry[a]['gs$cell'].col == 1){
+												if(first){
+													first = false;
+												}else{
+													reverse.push(obj);
+												};
+												obj = { "namn": "", "smeknamn": "", "id": "", "lat": "", "long": "", "ex": "", "rip": "", "badge": okandPNG() };
+												obj.namn = data.feed.entry[a].content['$t'];
+											}else if(data.feed.entry[a]['gs$cell'].col == 2){
+												obj.smeknamn = data.feed.entry[a].content['$t'];
+											}else if(data.feed.entry[a]['gs$cell'].col == 3){
+												obj.lat = data.feed.entry[a].content['$t'];
+											}else if(data.feed.entry[a]['gs$cell'].col == 4){
+												obj.long = data.feed.entry[a].content['$t'];
+											}else if(data.feed.entry[a]['gs$cell'].col == 5){
+												obj.ex = data.feed.entry[a].content['$t'];
+											}else if(data.feed.entry[a]['gs$cell'].col == 6){
+												obj.rip = data.feed.entry[a].content['$t'];
+											}else if(data.feed.entry[a]['gs$cell'].col == 7){
+												obj.badge = data.feed.entry[a].content['$t'];
 											};
 										};
 									};
@@ -191,7 +194,7 @@
 								name.appendChild(br);
 								var name_span = document.createElement('span');
 									name_span.setAttribute('class', 'smeknamn');
-							if(stadData[a].smeknamn == '-'){
+							if(stadData[a].smeknamn == ''){
 								var name_span_s = document.createTextNode(kminfo);
 							}else{
 								var name_span_s = document.createTextNode(kminfo + '"' + stadData[a].smeknamn + '"');
