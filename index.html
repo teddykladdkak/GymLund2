@@ -58,7 +58,6 @@
 						var data = rawdata;
 					};
 					var buttonWrapper = document.getElementById('andraStader');
-					document.getElementById('uppdt').innerText = 'Senast uppdaterad: ' + prittyDate(data.feed.updated['$t']);
 					for (var i = 0; i < data.feed.entry.length; i++){
 						if(data.feed.entry[i].content['$t'] == 'Städer'){}else if(data.feed.entry[i].content['$t'] == 'Nr'){}else{
 							var button = document.createElement('span');
@@ -542,8 +541,7 @@
 				Klicka på önskat gym för att se var den är på kartan.
 			</p><br/>
 			<span class="link"><a href="https://github.com/teddykladdkak/GymLund2" target="_blank">Källkod</a></span>
-			<span class="link"><a href="https://docs.google.com/spreadsheets/d/1BWtH6cBOzcdUlIywS7DqZcROSsQoC5F9p2NMYUhgFys/edit?usp=sharing" target="_blank">Data</a></span><br/>
-			<p id="uppdt"></p>
+			<span class="link"><a href="https://docs.google.com/spreadsheets/d/1BWtH6cBOzcdUlIywS7DqZcROSsQoC5F9p2NMYUhgFys/edit?usp=sharing" target="_blank">Data</a></span>
 			<p>
 				Instruktioner för att installera denna webappen:
 			</p>
