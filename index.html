@@ -25,59 +25,46 @@
 		<link rel="apple-touch-icon-precomposed" sizes="76x76" href="ico/icon76x76.png">
 		<link rel="apple-touch-icon-precomposed" sizes="120x120" href="ico/icon120x120.png">
 		<link rel="apple-touch-icon-precomposed" sizes="152x152" href="ico/icon152x152.png">
-
+		<script src="papaparse.min.js"></script>
 		<script type="text/javascript">
+			var links = {
+				"main": "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_YB46qi8Kbpik3gBFiMRpnJ0eARra-CeJ5W184E_KyMOsJb0gaMQ7QjWerc3qbr3AKXoYsRQOuhqt/pub?output=csv",
+				"ssandby": "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_YB46qi8Kbpik3gBFiMRpnJ0eARra-CeJ5W184E_KyMOsJb0gaMQ7QjWerc3qbr3AKXoYsRQOuhqt/pub?gid=2019424337&single=true&output=csv",
+				"lund": "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_YB46qi8Kbpik3gBFiMRpnJ0eARra-CeJ5W184E_KyMOsJb0gaMQ7QjWerc3qbr3AKXoYsRQOuhqt/pub?gid=703323633&single=true&output=csv",
+				"malmo": "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_YB46qi8Kbpik3gBFiMRpnJ0eARra-CeJ5W184E_KyMOsJb0gaMQ7QjWerc3qbr3AKXoYsRQOuhqt/pub?gid=212337358&single=true&output=csv",
+				"landskrona": "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_YB46qi8Kbpik3gBFiMRpnJ0eARra-CeJ5W184E_KyMOsJb0gaMQ7QjWerc3qbr3AKXoYsRQOuhqt/pub?gid=1598155507&single=true&output=csv",
+				"vaxjo": "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_YB46qi8Kbpik3gBFiMRpnJ0eARra-CeJ5W184E_KyMOsJb0gaMQ7QjWerc3qbr3AKXoYsRQOuhqt/pub?gid=1072536535&single=true&output=csv",
+				"goteborg": "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_YB46qi8Kbpik3gBFiMRpnJ0eARra-CeJ5W184E_KyMOsJb0gaMQ7QjWerc3qbr3AKXoYsRQOuhqt/pub?gid=1768239634&single=true&output=csv"
+			}
 			function removechilds(parent){if(parent.hasChildNodes()){while (parent.hasChildNodes()) {parent.removeChild(parent.firstChild);};};};
 			var loadedData = [];
 			var stadData = [];
-			//Fetch funktion som ger möjlighet att hämta info från Google Sheet.
-			var sheetID = '1BWtH6cBOzcdUlIywS7DqZcROSsQoC5F9p2NMYUhgFys';
-			var getJSON = function(url, callback) {
-				var xhr = new XMLHttpRequest();
-					xhr.open('GET', url, true);
-					xhr.responseType = 'json';
-					xhr.onload = function() {
-						var status = xhr.status;
-						if (status == 200) {
-							callback(null, xhr.response);
-						} else {
-							callback(status);
-						}
-					};
-					xhr.send();
-			};
 			function prittyDate(dat){var d = new Date(dat);var yy = d.getFullYear();var mm = d.getMonth() + 1;if(mm <= 9){mm = '0' + mm;};var dd = d.getDate();if(dd <= 9){dd = '0' + dd;};return yy + '-' + mm + '-' + dd;};
-			//Initial funktion som hämtar lista för alla tillgängliga gym.
-			getJSON('https://spreadsheets.google.com/feeds/cells/' + sheetID + '/1/public/values?alt=json',  function(err, rawdata) {
-				if (err != null) {
-					console.error(err);
-				}else{
-					if(!rawdata.feed){
-						var data = JSON.parse(rawdata);
-					}else{
-						var data = rawdata;
-					};
-					var buttonWrapper = document.getElementById('andraStader');
-					for (var i = 0; i < data.feed.entry.length; i++){
-						if(data.feed.entry[i].content['$t'] == 'Städer'){}else if(data.feed.entry[i].content['$t'] == 'Nr'){}else{
+			Papa.parse(links.main, {
+				download: true,
+				step: function(row) {
+					if(row.data[0] == "Städer"){}else{
+						console.log(row.data[0]);
+						var buttonWrapper = document.getElementById('andraStader');
 							var button = document.createElement('span');
 								button.setAttribute('class', 'link');
 								var button_a = document.createElement('a');
-									button_a.setAttribute('href', '#' + data.feed.entry[i+1].content['$t']);
-									button_a.setAttribute('onclick', 'changeGym(\'' + data.feed.entry[i+1].content['$t'] + '\')');
-									var button_a_text = document.createTextNode('Gym' + data.feed.entry[i].content['$t']);
+									button_a.setAttribute('href', '#' + row.data[1]);
+									button_a.setAttribute('onclick', 'changeGym(\'' + row.data[1] + '\')');
+									var button_a_text = document.createTextNode('Gym' + row.data[0]);
 									button_a.appendChild(button_a_text);
 								button.appendChild(button_a);
 							buttonWrapper.appendChild(button);
-							loadedData.push({"stad": data.feed.entry[i].content['$t'], "nr": data.feed.entry[i+1].content['$t']})
-							i++;
+							loadedData.push({"stad": row.data[0], "nr": row.data[1]})
+						if(location.hash == '' || !location.hash){
+							location.hash = loadedData[0].nr;
 						};
+						loadGym();
 					};
-					if(location.hash == '' || !location.hash){
-						location.hash = loadedData[0].nr;
-					};
-					loadGym();
-				};
+				},
+				error: function(results) {
+					console.log('Något gick fel');
+				}
 			});
 			//När stad är satt i hash aktiveras denna funktion, letar upp rätt sheet och hämtar all gym data.
 			function loadGym(){
@@ -85,47 +72,42 @@
 					if(loadedData[i].nr == location.hash.replace('#', '')){
 						document.getElementById('rubrik').innerText = 'Gym i ' + loadedData[i].stad;
 						document.getElementsByTagName('title')[0].innerText = 'Gym ' + loadedData[i].stad;
-						getJSON('https://spreadsheets.google.com/feeds/cells/' + sheetID + '/' + loadedData[i].nr + '/public/values?alt=json',  function(err, rawdata) {
-							if (err != null) {
-								console.error(err);
-							}else{
-								if(!rawdata.feed){
-									var data = JSON.parse(rawdata);
-								}else{
-									var data = rawdata;
-									var reverse = [];
-									var first = true;
-									var obj = {};
-									for (var a = 0; a < data.feed.entry.length; a++){
-										if(data.feed.entry[a].title['$t'].length == 2 && data.feed.entry[a].title['$t'].split('')[1] == '1'){}else{
-											if(data.feed.entry[a]['gs$cell'].col == 1){
-												if(first){
-													first = false;
-												}else{
-													reverse.push(obj);
-												};
-												obj = { "namn": "", "smeknamn": "", "id": "", "lat": "", "long": "", "ex": "", "rip": "", "badge": okandPNG() };
-												obj.namn = data.feed.entry[a].content['$t'];
-											}else if(data.feed.entry[a]['gs$cell'].col == 2){
-												obj.smeknamn = data.feed.entry[a].content['$t'];
-											}else if(data.feed.entry[a]['gs$cell'].col == 3){
-												obj.lat = data.feed.entry[a].content['$t'];
-											}else if(data.feed.entry[a]['gs$cell'].col == 4){
-												obj.long = data.feed.entry[a].content['$t'];
-											}else if(data.feed.entry[a]['gs$cell'].col == 5){
-												obj.ex = data.feed.entry[a].content['$t'];
-											}else if(data.feed.entry[a]['gs$cell'].col == 6){
-												obj.rip = data.feed.entry[a].content['$t'];
-											}else if(data.feed.entry[a]['gs$cell'].col == 7){
-												obj.badge = data.feed.entry[a].content['$t'];
-											};
+						if(loadedData[i].nr == 3){
+							var linktoload = links.ssandby;
+						}else if(loadedData[i].nr == 4){
+							var linktoload = links.lund;
+						}else if(loadedData[i].nr == 5){
+							var linktoload = links.malmo;
+						}else if(loadedData[i].nr == 6){
+							var linktoload = links.landskrona;
+						}else if(loadedData[i].nr == 7){
+							var linktoload = links.vaxjo;
+						}else if(loadedData[i].nr == 8){
+							var linktoload = links.goteborg;
+						}else{
+							var linktoload = links.lund;
+						};
+						Papa.parse(linktoload, {
+							download: true,
+							complete: function(results) {
+								var reverse = [];
+        						for (var a = 0; a < results.data.length; a++){
+            						if(results.data[a][0] == 'Namn'){}else{
+										if(!results.data[a][6] || results.data[a][6] == ''){
+											var badge = okandPNG();
+										}else{
+											var badge = results.data[a][6];
 										};
+										reverse.push({ "namn": results.data[a][0], "smeknamn": results.data[a][1], "id": "", "lat": results.data[a][2], "long": results.data[a][3], "ex": results.data[a][4], "rip": results.data[a][5], "badge":  badge});
 									};
-									stadData = reverse;
-									if(!window['lon'] == '0' && !window['lat'] == '0'){addKm()};
-									andralista();
 								};
-							};
+								stadData = reverse;
+								if(!window['lon'] == '0' && !window['lat'] == '0'){addKm()};
+								andralista();
+							},
+							error: function(results) {
+								console.log('Något gick fel');
+							}
 						});
 					};
 				};
